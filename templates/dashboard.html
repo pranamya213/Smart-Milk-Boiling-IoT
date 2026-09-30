@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Milk Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="icon">🥛</span>
+                <div>
+                    <h1>Smart Milk Monitor</h1>
+                    <p class="subtitle">IoT-Based Milk Boiling & Overflow Prevention</p>
+                </div>
+            </div>
+            <div class="status-badge connected">
+                <span class="dot"></span> Wi-Fi: Connected
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard">
+        <section class="hero-section">
+            <div class="hero-image" style="background-image: url('{{ url_for('static', filename='img/milk_pot.jpg') }}');"></div>
+            <div class="hero-text">
+                <h2>System Monitoring</h2>
+                <p>Monitor temperature, detect overflow risk, and receive instant safety alerts.</p>
+            </div>
+        </section>
+
+        <section class="metrics-grid">
+            <div class="card metric-card">
+                <div class="metric-icon">🌡️</div>
+                <div class="metric-info">
+                    <h3>Temperature</h3>
+                    <div class="value" id="temp-value">72°C</div>
+                    <div class="status-text" id="temp-status">Heating Normally</div>
+                </div>
+            </div>
+            <div class="card metric-card">
+                <div class="metric-icon">💧</div>
+                <div class="metric-info">
+                    <h3>Liquid Level</h3>
+                    <div class="value" id="level-value">Normal</div>
+                    <div class="status-text" id="level-status">Safe</div>
+                </div>
+            </div>
+            <div class="card metric-card">
+                <div class="metric-icon">🔥</div>
+                <div class="metric-info">
+                    <h3>Gas/Heater</h3>
+                    <div class="value" id="gas-value">ON</div>
+                </div>
+            </div>
+            <div class="card metric-card">
+                <div class="metric-icon">📶</div>
+                <div class="metric-info">
+                    <h3>Wi-Fi</h3>
+                    <div class="value">Connected</div>
+                </div>
+            </div>
+        </section>
+
+        <div class="main-content-grid">
+            <div class="left-column">
+                <section class="card temperature-section">
+                    <h3>Live Sensor Reading</h3>
+                    <div class="temp-display">
+                        <span class="large-temp" id="large-temp-value">72°C</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="temp-progress" style="width: 72%;"></div>
+                    </div>
+                    <p class="temp-label">Current Temperature</p>
+                </section>
+
+                <section class="card safety-section" id="safety-card">
+                    <div class="safety-icon" id="safety-icon">🟢</div>
+                    <div class="safety-info">
+                        <h3 id="safety-title">SYSTEM SAFE</h3>
+                        <p id="safety-desc">Monitoring milk boiling conditions</p>
+                    </div>
+                </section>
+            </div>
+
+            <div class="right-column">
+                <section class="card alerts-section">
+                    <h3>Recent Alerts</h3>
+                    <ul class="alerts-list" id="alerts-list">
+                        <li class="alert-item info"><span class="icon">✓</span> <span class="time">10:00 AM</span> System started</li>
+                        <li class="alert-item info"><span class="icon">✓</span> <span class="time">10:01 AM</span> Temperature monitoring active</li>
+                    </ul>
+                </section>
+
+                <section class="card demo-controls">
+                    <h3>Simulation Controls (Phase 1)</h3>
+                    <div class="button-group">
+                        <button class="btn btn-normal" onclick="simulateState('normal')">Normal</button>
+                        <button class="btn btn-warning" onclick="simulateState('warning')">Near Boiling</button>
+                        <button class="btn btn-critical" onclick="simulateState('overflow')">Overflow</button>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <footer class="app-footer">
+        <p>Smart Milk Boiling & Overflow Prevention System</p>
+        <p class="small">ESP32 • IoT • Sensor-Based Safety</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>
