@@ -22,7 +22,44 @@ function addAlert(message, type) {
     }
 }
 
-function simulateState(state) {
+// Global variable to track previous status to trigger alerts on change
+let previousStatus = null;
+let errorAlertAdded = false;
+
+async function fetchSystemStatus() {
+    try {
+        const response = await fetch('/api/system-status');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        updateUI(data);
+        errorAlertAdded = false;
+    } catch (error) {
+        console.error("Error fetching system status:", error);
+        handleDisconnection();
+    }
+}
+
+function handleDisconnection() {
+    const safetyCard = document.getElementById('safety-card');
+    const safetyIcon = document.getElementById('safety-icon');
+    const safetyTitle = document.getElementById('safety-title');
+    const safetyDesc = document.getElementById('safety-desc');
+    
+    safetyCard.className = 'card safety-section warning';
+    safetyCard.style.borderLeft = '6px solid var(--text-muted)';
+    safetyIcon.textContent = '🔌';
+    safetyTitle.textContent = 'BACKEND DISCONNECTED';
+    safetyDesc.textContent = 'Cannot reach API. Ensure Flask server is running.';
+    
+    if (!errorAlertAdded) {
+        addAlert('Connection to backend lost.', 'warning');
+        errorAlertAdded = true;
+    }
+}
+
+function updateUI(data) {
     const tempValue = document.getElementById('temp-value');
     const largeTempValue = document.getElementById('large-temp-value');
     const tempProgress = document.getElementById('temp-progress');
@@ -38,62 +75,105 @@ function simulateState(state) {
     const safetyTitle = document.getElementById('safety-title');
     const safetyDesc = document.getElementById('safety-desc');
 
-    if (state === 'normal') {
-        tempValue.textContent = '65°C';
-        largeTempValue.textContent = '65°C';
-        tempProgress.style.width = '65%';
+    // Restore border if it was changed by disconnection
+    safetyCard.style.borderLeft = '';
+
+    // Update Temperature
+    const temp = data.temperature;
+    tempValue.textContent = `${temp}°C`;
+    largeTempValue.textContent = `${temp}°C`;
+    
+    // Cap progress at 100 for visual consistency
+    const progressWidth = Math.min(temp, 100);
+    tempProgress.style.width = `${progressWidth}%`;
+
+    // Status logic
+    if (data.status === 'Safe') {
         tempStatus.textContent = 'Heating Normally';
         
-        levelValue.textContent = 'Normal';
+        levelValue.textContent = data.water_level;
         levelStatus.textContent = 'Safe';
+        levelValue.style.color = 'var(--text-main)';
         
-        gasValue.textContent = 'ON';
+        gasValue.textContent = data.gas_heater;
         gasValue.style.color = 'var(--text-main)';
         
         safetyCard.className = 'card safety-section safe';
         safetyIcon.textContent = '🟢';
         safetyTitle.textContent = 'SYSTEM SAFE';
-        safetyDesc.textContent = 'Monitoring milk boiling conditions';
+        safetyDesc.textContent = `Monitoring milk boiling conditions. (Buzzer: ${data.buzzer})`;
         
-        addAlert('System returning to normal monitoring state', 'info');
-    } 
-    else if (state === 'warning') {
-        tempValue.textContent = '85°C';
-        largeTempValue.textContent = '85°C';
-        tempProgress.style.width = '85%';
+        if (previousStatus !== 'Safe' && previousStatus !== null) {
+            addAlert('System returned to safe state.', 'info');
+        }
+    } else if (data.status === 'Warning') {
         tempStatus.textContent = 'Approaching Boil';
         
-        levelValue.textContent = 'Rising';
+        levelValue.textContent = data.water_level;
         levelStatus.textContent = 'Monitor closely';
+        levelValue.style.color = 'var(--accent-amber)';
         
-        gasValue.textContent = 'ON';
+        gasValue.textContent = data.gas_heater;
         gasValue.style.color = 'var(--text-main)';
         
         safetyCard.className = 'card safety-section warning';
         safetyIcon.textContent = '🟡';
         safetyTitle.textContent = 'ATTENTION';
-        safetyDesc.textContent = 'Temperature approaching boiling point';
+        safetyDesc.textContent = `Temperature approaching boiling point. (Buzzer: ${data.buzzer})`;
         
-        addAlert('Temperature approaching threshold (85°C)', 'warning');
-    }
-    else if (state === 'overflow') {
-        tempValue.textContent = '95°C';
-        largeTempValue.textContent = '95°C';
-        tempProgress.style.width = '95%';
+        if (previousStatus !== 'Warning') {
+            addAlert(`Temperature approaching threshold (${temp}°C)`, 'warning');
+        }
+    } else if (data.status === 'Critical') {
         tempStatus.textContent = 'Critical Heat';
         
-        levelValue.textContent = 'Overflow Detected!';
+        levelValue.textContent = data.water_level === 'Overflow' ? 'Overflow Detected!' : data.water_level;
         levelStatus.textContent = 'Critical';
         levelValue.style.color = 'var(--accent-red)';
         
-        gasValue.textContent = 'OFF';
+        gasValue.textContent = data.gas_heater;
         gasValue.style.color = 'var(--accent-red)';
         
         safetyCard.className = 'card safety-section critical';
         safetyIcon.textContent = '🔴';
         safetyTitle.textContent = 'ATTENTION REQUIRED';
-        safetyDesc.textContent = 'Overflow risk detected. Gas shut off.';
+        safetyDesc.textContent = `Critical risk detected. Gas shut off. (Buzzer: ${data.buzzer})`;
         
-        addAlert('Overflow risk detected! Gas/Heater turned OFF.', 'critical');
+        if (previousStatus !== 'Critical') {
+            addAlert('Critical risk detected! Gas/Heater turned OFF.', 'critical');
+        }
+    }
+    
+    previousStatus = data.status;
+}
+
+// Start polling
+setInterval(fetchSystemStatus, 2000);
+// Initial fetch
+fetchSystemStatus();
+
+// Modifying simulateState to send POST requests to the new API
+async function simulateState(state) {
+    let payload = {};
+    if (state === 'normal') {
+        payload = { temperature: 65.0, water_level: "Normal" };
+    } else if (state === 'warning') {
+        payload = { temperature: 86.0, water_level: "High" };
+    } else if (state === 'overflow') {
+        payload = { temperature: 96.0, water_level: "Overflow" };
+    }
+
+    try {
+        await fetch('/api/sensor-data', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        // Trigger an immediate fetch to update the UI right away
+        fetchSystemStatus();
+    } catch (error) {
+        console.error("Simulation failed:", error);
     }
 }
